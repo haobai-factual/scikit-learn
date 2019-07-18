@@ -11,6 +11,9 @@ df = pd.read_csv('data.csv')
 x_train = df[['lat', 'lng']]
 x_train['ts'] = df['ts'] * 1E-8
 
+x_train1 = x_train[:int(len(x_train)/2)]
+x_train2 = x_train[int(len(x_train)/2):]
+
 seed = 2018
 
 # =============================================================================
@@ -36,13 +39,14 @@ dbs = DBSCAN(
     eps = 5E-2,
     min_samples = 3,
     metric = spatial_temporal_event_distance,
-    metric_params={'alpha': 1},
+    metric_params={'alpha': 100},
     algorithm = 'auto',
     leaf_size = 30,
     p = None,
     n_jobs = None)
 
-md = dbs.fit(x_train)
+md = dbs.fit(x_train1)
+md = dbs.fit(x_train2)
 
 c_label = md.labels_
 
@@ -52,4 +56,4 @@ df['c_label'] = c_label
 
 plt.scatter(df['lat'], df['lng'], c = df['c_label'])
 plt.show()
-plt.save('/Users/haobai/Downloads/mingzi.png')
+
