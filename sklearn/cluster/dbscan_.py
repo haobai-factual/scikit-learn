@@ -191,7 +191,6 @@ def dbscan(X, psamples, plabels, eps=0.5, min_samples=5, metric='minkowski', met
     dbscan_inner(int(start), core_samples, neighborhoods, all_labels)
     return np.where(core_samples)[0], all_labels, all_samples
 
-
 class DBSCAN(BaseEstimator, ClusterMixin):
     """Perform DBSCAN clustering from vector array or distance matrix.
 
@@ -368,11 +367,11 @@ class DBSCAN(BaseEstimator, ClusterMixin):
                        **self.get_params())
         self.core_sample_indices_, self.labels_, self.samples_ = clust
         #if len(self.core_sample_indices_):
-            # fix for scipy sparse indexing issue
-         #   self.components_ = X[self.core_sample_indices_].copy()
+        #    # fix for scipy sparse indexing issue
+        #    self.components_ = X[self.core_sample_indices_].copy()
         #else:
-            # no core samples
-        #    self.components_ = np.empty((0, X.shape[1]))
+        #    # no core samples
+        #   self.components_ = np.empty((0, X.shape[1]))
         return self
 
     def fit_predict(self, X, y=None, sample_weight=None):
