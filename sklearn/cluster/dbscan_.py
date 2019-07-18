@@ -20,7 +20,7 @@ from ..neighbors import NearestNeighbors
 from ._dbscan_inner import dbscan_inner
 
 
-def dbscan(X, eps=0.5, min_samples=5, metric='minkowski', metric_params=None,
+def dbscan(X, psamples, plabels, eps=0.5, min_samples=5, metric='minkowski', metric_params=None,
            algorithm='auto', leaf_size=30, p=2, sample_weight=None,
            n_jobs=None):
     """Perform DBSCAN clustering from vector array or distance matrix.
@@ -144,6 +144,10 @@ def dbscan(X, eps=0.5, min_samples=5, metric='minkowski', metric_params=None,
         sample_weight = np.asarray(sample_weight)
         check_consistent_length(X, sample_weight)
 
+    all_samples = np.concatenate((psamples, X))
+    # Initially, all samples are noise.
+    all_labels = np.concatenate((plabels, np.full(X.shape[0], -1, dtype=np.intp)))
+
     # Calculate neighborhood for all samples. This leaves the original point
     # in, which needs to be considered later (i.e. point i is in the
     # neighborhood of point i. While True, its useless information)
@@ -169,9 +173,9 @@ def dbscan(X, eps=0.5, min_samples=5, metric='minkowski', metric_params=None,
                                            metric=metric,
                                            metric_params=metric_params, p=p,
                                            n_jobs=n_jobs)
-        neighbors_model.fit(X)
+        neighbors_model.fit(all_samples)
         # This has worst case O(n^2) memory complexity
-        neighborhoods = neighbors_model.radius_neighbors(X, eps,
+        neighborhoods = neighbors_model.radius_neighbors(all_samples, eps,
                                                          return_distance=False)
 
     if sample_weight is None:
@@ -181,13 +185,11 @@ def dbscan(X, eps=0.5, min_samples=5, metric='minkowski', metric_params=None,
         n_neighbors = np.array([np.sum(sample_weight[neighbors])
                                 for neighbors in neighborhoods])
 
-    # Initially, all samples are noise.
-    labels = np.full(X.shape[0], -1, dtype=np.intp)
-
     # A list of all core samples found.
+    start = psamples.shape[0]
     core_samples = np.asarray(n_neighbors >= min_samples, dtype=np.uint8)
-    dbscan_inner(core_samples, neighborhoods, labels)
-    return np.where(core_samples)[0], labels
+    dbscan_inner(int(start), core_samples, neighborhoods, all_labels)
+    return np.where(core_samples)[0], all_labels, all_samples
 
 
 class DBSCAN(BaseEstimator, ClusterMixin):
@@ -327,6 +329,9 @@ class DBSCAN(BaseEstimator, ClusterMixin):
         self.p = p
         self.n_jobs = n_jobs
 
+        self.samples_ = None
+        self.labels_ = np.empty(0, dtype=np.intp)
+
     def fit(self, X, y=None, sample_weight=None):
         """Perform DBSCAN clustering from features, or distance matrix.
 
@@ -353,15 +358,21 @@ class DBSCAN(BaseEstimator, ClusterMixin):
 
         """
         X = check_array(X, accept_sparse='csr')
-        clust = dbscan(X, sample_weight=sample_weight,
-                       **self.get_params())
-        self.core_sample_indices_, self.labels_ = clust
-        if len(self.core_sample_indices_):
-            # fix for scipy sparse indexing issue
-            self.components_ = X[self.core_sample_indices_].copy()
+        if self.samples_ is None:
+            self.samples_ = np.empty(shape=(0, X.shape[1]), dtype=X.dtype)
         else:
+            if self.samples_.shape[1] != X.shape[1]:
+                raise InputError("Incorrect data dimensions.")
+
+        clust = dbscan(X, self.samples_, self.labels_, sample_weight=sample_weight,
+                       **self.get_params())
+        self.core_sample_indices_, self.labels_, self.samples_ = clust
+        #if len(self.core_sample_indices_):
+            # fix for scipy sparse indexing issue
+         #   self.components_ = X[self.core_sample_indices_].copy()
+        #else:
             # no core samples
-            self.components_ = np.empty((0, X.shape[1]))
+        #    self.components_ = np.empty((0, X.shape[1]))
         return self
 
     def fit_predict(self, X, y=None, sample_weight=None):
