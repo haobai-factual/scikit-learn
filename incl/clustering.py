@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from sklearn.cluster import *
+from sklearn.metrics.pairwise import haversine_distances
 
 
 df = pd.read_csv('data.csv')
@@ -27,11 +28,15 @@ seed = 2018
 #     algorithm = 'full')
 # =============================================================================
 
+def spatial_temporal_event_distance(p1, p2, **metric_params):
+	temporal_distance = metric_params['alpha'] * abs(p1[2] - p2[2])
+	return haversine_distances([p1[:2], p2[:2]])[0][1] + temporal_distance
+
 dbs = DBSCAN(
     eps = 5E-2,
     min_samples = 3,
-    metric = 'euclidean',
-    metric_params = None,
+    metric = spatial_temporal_event_distance,
+    metric_params={'alpha': 1},
     algorithm = 'auto',
     leaf_size = 30,
     p = None,
@@ -46,3 +51,5 @@ df['c_label'] = c_label
 # TODO: plot
 
 plt.scatter(df['lat'], df['lng'], c = df['c_label'])
+plt.show()
+plt.save('/Users/haobai/Downloads/mingzi.png')
