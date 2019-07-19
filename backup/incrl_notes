@@ -1,0 +1,4 @@
+1. reduced process times
+2. on-time process (data may finished in 2~3 days rather than 7 days)
+3. Same result as dbscan on entire data
+4. untangle the daily and time-partitioned (wait for 7 days) process and thus will greatly simplify our workflow/process
